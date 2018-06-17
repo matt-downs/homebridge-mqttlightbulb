@@ -1,20 +1,28 @@
 // MQTT Switch Accessory plugin for HomeBridge
 //
 // Remember to add accessory to config.json. Example:
-// "accessories": [
-//     {
-//            "accessory": "mqttlightbulb",
-//            "name": "PUT THE NAME OF YOUR SWITCH HERE",
-//            "url": "PUT URL OF THE BROKER HERE",
-//			  "username": "PUT USERNAME OF THE BROKER HERE",
-//            "password": "PUT PASSWORD OF THE BROKER HERE"
-// 			  "caption": "PUT THE LABEL OF YOUR SWITCH HERE",
-// 			  "topics": {
-// 				"statusGet": 	"PUT THE MQTT TOPIC FOR THE GETTING THE STATUS OF YOUR SWITCH HERE",
-// 				"statusSet": 	"PUT THE MQTT TOPIC FOR THE SETTING THE STATUS OF YOUR SWITCH HERE"
-// 			  }
-//     }
-// ],
+//
+// "accessories": [{
+// 	"accessory": "mqttlightbulb",
+// 	"name": "PUT THE NAME OF YOUR SWITCH HERE",
+// 	"url": "PUT URL OF THE BROKER HERE",
+// 	"username": "PUT USERNAME OF THE BROKER HERE",
+// 	"password": "PUT PASSWORD OF THE BROKER HERE"
+// 	"caption": "PUT THE LABEL OF YOUR SWITCH HERE",
+// 	"topics": {
+// 		"getOn": "stat/sonoff-rgb/POWER",
+// 		"setOn": "cmnd/sonoff-rgb/POWER",
+// 		"getBrightness": "stat/sonoff-rgb/Dimmer",
+// 		"setBrightness": "cmnd/sonoff-rgb/Dimmer",
+// 		"getHue": "<topic to get the hue>",
+// 		"setHue": "<topic to set the hue>",
+// 		"getSaturation": "<topic to get the saturation>",
+// 		"setSaturation": "<topic to set the saturation>"
+// new
+// getHsb
+// setHsb
+// 	}
+// }],
 //
 // When you attempt to add a device, it will ask for a "PIN code".
 // The default code for all HomeBridge accessories is 031-45-154.
@@ -51,10 +59,12 @@ function mqttlightbulbAccessory(log, config) {
 	this.caption = config["caption"];
 	this.retain = config["retain"];
 	this.topics = config["topics"];
+
+	// Accessory status
 	this.on = false;
-	this.brightness = 0;
-	this.hue = 0;
-	this.saturation = 0;
+	this.hue = 0; // 0-360
+	this.saturation = 0; // 0-100
+	this.brightness = 0; // 0-100
 
 	this.service = new Service.Lightbulb(this.name);
 	this.service
@@ -84,34 +94,42 @@ function mqttlightbulbAccessory(log, config) {
 	this.client.on('message', function (topic, message) {
 		// console.log(message.toString(), topic);
 
-		if (topic == that.topics.getOn) {
-			var status = message.toString();
-			that.on = (status == "true" ? true : false);
-			that.service.getCharacteristic(Characteristic.On).setValue(that.on, undefined, 'fromSetValue');
-		}
+		// TODO probably subscribe to POWER updates
+		// if (topic == that.topics.getOn) {
+		// 	var status = message.toString();
+		// 	that.on = (status == "On" ? true : false);
+		// 	that.service.getCharacteristic(Characteristic.On).setValue(that.on, undefined, 'fromSetValue');
+		// }
 
-		if (topic == that.topics.getBrightness) {
-			var val = parseInt(message.toString());
-			that.brightness = val;
-			that.service.getCharacteristic(Characteristic.Brightness).setValue(that.brightness, undefined, 'fromSetValue');
-		}
+		if (topic == that.topics.getHsb) {
+			try {
+				// Pull the HSB values from the message
+				// message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+				let hsb = JSON.parse(message).HSBColor;
+				[that.hue, that.saturation, that.brightness] = hsb.split(',');
+				that.on = brightness > 0;
 
-		if (topic == that.topics.getHue) {
-			var val = parseInt(message.toString());
-			that.hue = val;
-			that.service.getCharacteristic(Characteristic.Hue).setValue(that.hue, undefined, 'fromSetValue');
-		}
+				// Update the accessory's state
+				that.service.getCharacteristic(Characteristic.On).setValue(that.on, undefined, 'fromSetValue');
+				that.service.getCharacteristic(Characteristic.Hue).setValue(that.hue, undefined, 'fromSetValue');
+				that.service.getCharacteristic(Characteristic.Saturation).setValue(that.saturation, undefined, 'fromSetValue');
+				that.service.getCharacteristic(Characteristic.Brightness).setValue(that.brightness, undefined, 'fromSetValue');
 
-		if (topic == that.topics.getSaturation) {
-			var val = parseInt(message.toString());
-			that.saturation = val;
-			that.service.getCharacteristic(Characteristic.Brightness).setValue(that.saturation, undefined, 'fromSetValue');
+			} catch (error) {
+				console.log('Error: malformed HSBColor result:');
+				console.log(message);
+			}
 		}
 	});
 	this.client.subscribe(this.topics.getOn);
-	this.client.subscribe(this.topics.getBrightness);
-	this.client.subscribe(this.topics.getHue);
-	this.client.subscribe(this.topics.getSaturation);
+	this.client.subscribe(this.topics.getHsb);
+
+	this.publishHsb = () => {
+		let message = `${this.hue},${this.saturation},${this.brightness},`;
+		this.client.publish(this.topics.setHsb, message, {
+			retain: this.retain
+		});
+	}
 }
 
 module.exports = function (homebridge) {
@@ -128,9 +146,9 @@ mqttlightbulbAccessory.prototype.getStatus = function (callback) {
 mqttlightbulbAccessory.prototype.setStatus = function (status, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.on = status;
-		this.client.publish(this.topics.setOn, status ? "true" : "false", {
-			retain: this.retain
-		});
+		if (!status) this.brightness = 0;
+
+		this.publishHsb();
 	}
 	callback();
 }
@@ -143,9 +161,8 @@ mqttlightbulbAccessory.prototype.setBrightness = function (brightness, callback,
 	if (context !== 'fromSetValue') {
 		this.brightness = brightness;
 		// console.log("Brightness:",this.brightness);
-		this.client.publish(this.topics.setBrightness, this.brightness.toString(), {
-			retain: this.retain
-		});
+		
+		this.publishHsb();
 	}
 	callback();
 }
@@ -158,9 +175,8 @@ mqttlightbulbAccessory.prototype.setHue = function (hue, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.hue = hue;
 		// console.log("Hue:",this.hue);
-		this.client.publish(this.topics.setHue, this.hue.toString(), {
-			retain: this.retain
-		});
+		
+		this.publishHsb();
 	}
 	callback();
 }
@@ -173,9 +189,8 @@ mqttlightbulbAccessory.prototype.setSaturation = function (saturation, callback,
 	if (context !== 'fromSetValue') {
 		this.saturation = saturation;
 		// console.log("Saturation:",this.saturation);
-		this.client.publish(this.topics.setSaturation, this.saturation.toString(), {
-			retain: this.retain
-		});
+		
+		this.publishHsb();
 	}
 	callback();
 }
