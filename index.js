@@ -163,9 +163,14 @@ module.exports = homebridge => {
   );
 };
 
-mqttlightbulbAccessory.prototype.getStatus = callback =>
+mqttlightbulbAccessory.prototype.getStatus = function(callback) {
   callback(null, this.on);
-mqttlightbulbAccessory.prototype.setStatus = (status, callback, context) => {
+};
+mqttlightbulbAccessory.prototype.setStatus = function(
+  status,
+  callback,
+  context
+) {
   if (context !== contextEnum.fromSetValue) {
     this.on = status;
     this.publishOn();
@@ -173,13 +178,14 @@ mqttlightbulbAccessory.prototype.setStatus = (status, callback, context) => {
   callback();
 };
 
-mqttlightbulbAccessory.prototype.getBrightness = callback =>
+mqttlightbulbAccessory.prototype.getBrightness = function(callback) {
   callback(null, this.brightness);
-mqttlightbulbAccessory.prototype.setBrightness = (
+};
+mqttlightbulbAccessory.prototype.setBrightness = function(
   brightness,
   callback,
   context
-) => {
+) {
   if (context !== contextEnum.fromSetValue) {
     this.brightness = brightness;
     this.publishHsb();
@@ -187,8 +193,10 @@ mqttlightbulbAccessory.prototype.setBrightness = (
   callback();
 };
 
-mqttlightbulbAccessory.prototype.getHue = callback => callback(null, this.hue);
-mqttlightbulbAccessory.prototype.setHue = (hue, callback, context) => {
+mqttlightbulbAccessory.prototype.getHue = function(callback) {
+  callback(null, this.hue);
+};
+mqttlightbulbAccessory.prototype.setHue = function(hue, callback, context) {
   if (context !== contextEnum.fromSetValue) {
     this.hue = hue;
     this.publishHsb();
@@ -196,13 +204,14 @@ mqttlightbulbAccessory.prototype.setHue = (hue, callback, context) => {
   callback();
 };
 
-mqttlightbulbAccessory.prototype.getSaturation = callback =>
+mqttlightbulbAccessory.prototype.getSaturation = function(callback) {
   callback(null, this.saturation);
-mqttlightbulbAccessory.prototype.setSaturation = (
+};
+mqttlightbulbAccessory.prototype.setSaturation = function(
   saturation,
   callback,
   context
-) => {
+) {
   if (context !== contextEnum.fromSetValue) {
     this.saturation = saturation;
     this.publishHsb();
@@ -210,4 +219,6 @@ mqttlightbulbAccessory.prototype.setSaturation = (
   callback();
 };
 
-mqttlightbulbAccessory.prototype.getServices = () => [this.service];
+mqttlightbulbAccessory.prototype.getServices = function() {
+  return [this.service];
+};
