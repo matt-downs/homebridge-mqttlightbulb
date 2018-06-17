@@ -92,19 +92,17 @@ function mqttlightbulbAccessory(log, config) {
 	});
 
 	this.client.on('message', function (topic, message) {
-		// console.log(message.toString(), topic);
 
-		// TODO probably subscribe to POWER updates
-		// if (topic == that.topics.getOn) {
-		// 	var status = message.toString();
-		// 	that.on = (status == "On" ? true : false);
-		// 	that.service.getCharacteristic(Characteristic.On).setValue(that.on, undefined, 'fromSetValue');
-		// }
+		if (topic == that.topics.getOn) {
+			var status = message.toString();
+			that.on = (status === "On" ? true : false);
+			that.service.getCharacteristic(Characteristic.On).setValue(that.on, undefined, 'fromSetValue');
+		}
 
 		if (topic == that.topics.getHsb) {
 			try {
 				// Pull the HSB values from the message
-				// message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+				// eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
 				let hsb = JSON.parse(message).HSBColor;
 				[that.hue, that.saturation, that.brightness] = hsb.split(',');
 				that.on = brightness > 0;
@@ -130,6 +128,13 @@ function mqttlightbulbAccessory(log, config) {
 			retain: this.retain
 		});
 	}
+
+	this.publishOn = () => {
+		let message = this.on ? "On" : "Off";
+		this.client.publish(this.topics.setOn, message, {
+			retain: this.retain
+		});
+	}
 }
 
 module.exports = function (homebridge) {
@@ -146,9 +151,8 @@ mqttlightbulbAccessory.prototype.getStatus = function (callback) {
 mqttlightbulbAccessory.prototype.setStatus = function (status, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.on = status;
-		if (!status) this.brightness = 0;
 
-		this.publishHsb();
+		this.publishOn();
 	}
 	callback();
 }
