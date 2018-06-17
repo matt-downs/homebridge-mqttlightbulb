@@ -1,8 +1,7 @@
 {
-  "name": "homebridge-mqttlightbulb",
-  "version": "0.0.3",
-  "description": "Homebridge plugin for MQTT Lightbulub",
-  "note": "peerDependencies is hardcoded to peerDepdendencies in homebridge!!!",
+  "name": "homebridge-sonoff-tasmota-mqtt-hsb",
+  "version": "1.0.0",
+  "description": "A homebridge plugin for RGB LED devices running the Sonoff-Tasmota firmware, such as the MagicHome LED strip controller.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -14,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ameeuw/homebridge-mqttlightbulb"
+    "url": "https://github.com/matt-downs/homebridge-sonoff-tasmota-mqtt-hsb"
   },
   "keywords": [
     "homebridge-plugin",
@@ -22,15 +21,19 @@
     "homekit",
     "Siri",
     "IoT",
-    "Lightbulb"
+    "RGB",
+    "LED",
+    "HSB",
+    "Sonoff",
+    "Tasmota"
   ],
   "dependencies": {
     "mqtt": "^2.18.1"
   },
-  "author": "ameeuw",
-  "license": "GPL2",
+  "author": "matt-downs",
+  "license": "Apache 2.0",
   "bugs": {
-    "url": "https://github.com/ameeuw/homebridge-mqttlightbulb/issues"
+    "url": "https://github.com/matt-downs/homebridge-sonoff-tasmota-mqtt-hsb/issues"
   },
-  "homepage": "https://github.com/ameeuw/homebridge-mqttlightbulb"
+  "homepage": "https://github.com/matt-downs/homebridge-sonoff-tasmota-mqtt-hsb"
 }

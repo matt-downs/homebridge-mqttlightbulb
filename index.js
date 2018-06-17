@@ -1,37 +1,17 @@
-// MQTT Switch Accessory plugin for HomeBridge
-//
-// Remember to add accessory to config.json. Example:
-//
-// "accessories": [{
-// 	"accessory": "mqttlightbulb",
-// 	"name": "PUT THE NAME OF YOUR SWITCH HERE",
-// 	"url": "PUT URL OF THE BROKER HERE",
-// 	"username": "PUT USERNAME OF THE BROKER HERE",
-// 	"password": "PUT PASSWORD OF THE BROKER HERE"
-// 	"caption": "PUT THE LABEL OF YOUR SWITCH HERE",
-// 	"topics": {
-// 		"getOn": "stat/sonoff/POWER",
-// 		"setOn": "cmnd/sonoff/POWER",
-// 		"getHsb": "stat/sonoff/HSBColor",
-// 		"setHsb": "cmnd/sonoff/HSBColor"
-// 	}
-// }],
-//
-// When you attempt to add a device, it will ask for a "PIN code".
-// The default code for all HomeBridge accessories is 031-45-154.
-
 "use strict";
 
 let Service, Characteristic;
 const mqtt = require("mqtt");
-const contextEnum = Object.freeze({ fromSetValue: 1 });
+const contextEnum = Object.freeze({
+  fromSetValue: 1
+});
 
 module.exports = homebridge => {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   homebridge.registerAccessory(
-    "homebridge-mqttlightbulb",
-    "mqttlightbulb",
+    "homebridge-sonoff-tasmota-mqtt-hsb",
+    "sonoff-tasmota-mqtt-hsb",
     SonoffTasmotaMqttHsb
   );
 };
@@ -44,8 +24,8 @@ class SonoffTasmotaMqttHsb {
     this.client_Id =
       "mqttjs_" +
       Math.random()
-        .toString(16)
-        .substr(2, 8);
+      .toString(16)
+      .substr(2, 8);
     this.options = {
       keepalive: 10,
       clientId: this.client_Id,
@@ -107,44 +87,46 @@ class SonoffTasmotaMqttHsb {
 
   mqttHandleMessage(topic, message) {
     switch (topic) {
-      case this.topics.getOn: {
-        var status = message.toString();
-        this.on = status === "On" ? true : false;
-        this.service
+      case this.topics.getOn:
+        {
+          var status = message.toString();
+          this.on = status === "On" ? true : false;
+          this.service
           .getCharacteristic(Characteristic.On)
           .setValue(this.on, undefined, contextEnum.fromSetValue);
 
-        break;
-      }
-
-      case this.topics.getHsb: {
-        try {
-          // Pull the HSB values from the message
-          // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
-          const hsb = JSON.parse(message).HSBColor;
-          [this.hue, this.saturation, this.brightness] = hsb.split(",");
-          this.on = brightness > 0;
-
-          // Update the accessory's state
-          this.service
-            .getCharacteristic(Characteristic.On)
-            .setValue(this.on, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Hue)
-            .setValue(this.hue, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Saturation)
-            .setValue(this.saturation, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Brightness)
-            .setValue(this.brightness, undefined, contextEnum.fromSetValue);
-        } catch (error) {
-          console.log("Error: malformed HSBColor result:");
-          console.log(message);
+          break;
         }
 
-        break;
-      }
+      case this.topics.getHsb:
+        {
+          try {
+            // Pull the HSB values from the message
+            // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+            const hsb = JSON.parse(message).HSBColor;
+            [this.hue, this.saturation, this.brightness] = hsb.split(",");
+            this.on = brightness > 0;
+
+            // Update the accessory's state
+            this.service
+              .getCharacteristic(Characteristic.On)
+              .setValue(this.on, undefined, contextEnum.fromSetValue);
+            this.service
+              .getCharacteristic(Characteristic.Hue)
+              .setValue(this.hue, undefined, contextEnum.fromSetValue);
+            this.service
+              .getCharacteristic(Characteristic.Saturation)
+              .setValue(this.saturation, undefined, contextEnum.fromSetValue);
+            this.service
+              .getCharacteristic(Characteristic.Brightness)
+              .setValue(this.brightness, undefined, contextEnum.fromSetValue);
+          } catch (error) {
+            console.log("Error: malformed HSBColor result:");
+            console.log(message);
+          }
+
+          break;
+        }
 
       default:
         break;
