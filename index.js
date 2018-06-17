@@ -100,68 +100,69 @@ class SonoffTasmotaMqttHsb {
     this.client.on("error", err => {
       this.log("Error event on MQTT:", err);
     });
+    this.client.on("message", this.mqttHandleMessage.bind(this));
+    this.client.subscribe(this.topics.getOn);
+    this.client.subscribe(this.topics.getHsb);
+  }
 
-    this.client.on("message", (topic, message) => {
-      switch (topic) {
-        case this.topics.getOn: {
-          var status = message.toString();
-          this.on = status === "On" ? true : false;
+  mqttHandleMessage(topic, message) {
+    switch (topic) {
+      case this.topics.getOn: {
+        var status = message.toString();
+        this.on = status === "On" ? true : false;
+        this.service
+          .getCharacteristic(Characteristic.On)
+          .setValue(this.on, undefined, contextEnum.fromSetValue);
+
+        break;
+      }
+
+      case this.topics.getHsb: {
+        try {
+          // Pull the HSB values from the message
+          // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+          const hsb = JSON.parse(message).HSBColor;
+          [this.hue, this.saturation, this.brightness] = hsb.split(",");
+          this.on = brightness > 0;
+
+          // Update the accessory's state
           this.service
             .getCharacteristic(Characteristic.On)
             .setValue(this.on, undefined, contextEnum.fromSetValue);
-
-          break;
+          this.service
+            .getCharacteristic(Characteristic.Hue)
+            .setValue(this.hue, undefined, contextEnum.fromSetValue);
+          this.service
+            .getCharacteristic(Characteristic.Saturation)
+            .setValue(this.saturation, undefined, contextEnum.fromSetValue);
+          this.service
+            .getCharacteristic(Characteristic.Brightness)
+            .setValue(this.brightness, undefined, contextEnum.fromSetValue);
+        } catch (error) {
+          console.log("Error: malformed HSBColor result:");
+          console.log(message);
         }
 
-        case this.topics.getHsb: {
-          try {
-            // Pull the HSB values from the message
-            // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
-            const hsb = JSON.parse(message).HSBColor;
-            [this.hue, this.saturation, this.brightness] = hsb.split(",");
-            this.on = brightness > 0;
-
-            // Update the accessory's state
-            this.service
-              .getCharacteristic(Characteristic.On)
-              .setValue(this.on, undefined, contextEnum.fromSetValue);
-            this.service
-              .getCharacteristic(Characteristic.Hue)
-              .setValue(this.hue, undefined, contextEnum.fromSetValue);
-            this.service
-              .getCharacteristic(Characteristic.Saturation)
-              .setValue(this.saturation, undefined, contextEnum.fromSetValue);
-            this.service
-              .getCharacteristic(Characteristic.Brightness)
-              .setValue(this.brightness, undefined, contextEnum.fromSetValue);
-          } catch (error) {
-            console.log("Error: malformed HSBColor result:");
-            console.log(message);
-          }
-
-          break;
-        }
-
-        default:
-          break;
+        break;
       }
+
+      default:
+        break;
+    }
+  }
+
+  mqttPublishHsb() {
+    const message = `${this.hue},${this.saturation},${this.brightness},`;
+    this.client.publish(this.topics.setHsb, message, {
+      retain: this.retain
     });
-    this.client.subscribe(this.topics.getOn);
-    this.client.subscribe(this.topics.getHsb);
+  }
 
-    this.publishHsb = () => {
-      const message = `${this.hue},${this.saturation},${this.brightness},`;
-      this.client.publish(this.topics.setHsb, message, {
-        retain: this.retain
-      });
-    };
-
-    this.publishOn = () => {
-      const message = this.on ? "On" : "Off";
-      this.client.publish(this.topics.setOn, message, {
-        retain: this.retain
-      });
-    };
+  mqttPublishStatus() {
+    const message = this.on ? "On" : "Off";
+    this.client.publish(this.topics.setOn, message, {
+      retain: this.retain
+    });
   }
 
   getStatus(callback) {
@@ -170,7 +171,7 @@ class SonoffTasmotaMqttHsb {
   setStatus(status, callback, context) {
     if (context !== contextEnum.fromSetValue) {
       this.on = status;
-      this.publishOn();
+      this.mqttPublishStatus();
     }
     callback();
   }
@@ -181,7 +182,7 @@ class SonoffTasmotaMqttHsb {
   setBrightness(brightness, callback, context) {
     if (context !== contextEnum.fromSetValue) {
       this.brightness = brightness;
-      this.publishHsb();
+      this.mqttPublishHsb();
     }
     callback();
   }
@@ -192,7 +193,7 @@ class SonoffTasmotaMqttHsb {
   setHue(hue, callback, context) {
     if (context !== contextEnum.fromSetValue) {
       this.hue = hue;
-      this.publishHsb();
+      this.mqttPublishHsb();
     }
     callback();
   }
@@ -203,7 +204,7 @@ class SonoffTasmotaMqttHsb {
   setSaturation(saturation, callback, context) {
     if (context !== contextEnum.fromSetValue) {
       this.saturation = saturation;
-      this.publishHsb();
+      this.mqttPublishHsb();
     }
     callback();
   }
