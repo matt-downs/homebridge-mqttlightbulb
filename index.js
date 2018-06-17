@@ -164,8 +164,7 @@ mqttlightbulbAccessory.prototype.getBrightness = function (callback) {
 mqttlightbulbAccessory.prototype.setBrightness = function (brightness, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.brightness = brightness;
-		// console.log("Brightness:",this.brightness);
-		
+
 		this.publishHsb();
 	}
 	callback();
@@ -178,8 +177,7 @@ mqttlightbulbAccessory.prototype.getHue = function (callback) {
 mqttlightbulbAccessory.prototype.setHue = function (hue, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.hue = hue;
-		// console.log("Hue:",this.hue);
-		
+
 		this.publishHsb();
 	}
 	callback();
@@ -192,8 +190,7 @@ mqttlightbulbAccessory.prototype.getSaturation = function (callback) {
 mqttlightbulbAccessory.prototype.setSaturation = function (saturation, callback, context) {
 	if (context !== 'fromSetValue') {
 		this.saturation = saturation;
-		// console.log("Saturation:",this.saturation);
-		
+
 		this.publishHsb();
 	}
 	callback();
