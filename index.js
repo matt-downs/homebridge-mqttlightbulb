@@ -10,17 +10,10 @@
 // 	"password": "PUT PASSWORD OF THE BROKER HERE"
 // 	"caption": "PUT THE LABEL OF YOUR SWITCH HERE",
 // 	"topics": {
-// 		"getOn": "stat/sonoff-rgb/POWER",
-// 		"setOn": "cmnd/sonoff-rgb/POWER",
-// 		"getBrightness": "stat/sonoff-rgb/Dimmer",
-// 		"setBrightness": "cmnd/sonoff-rgb/Dimmer",
-// 		"getHue": "<topic to get the hue>",
-// 		"setHue": "<topic to set the hue>",
-// 		"getSaturation": "<topic to get the saturation>",
-// 		"setSaturation": "<topic to set the saturation>"
-// new
-// getHsb
-// setHsb
+// 		"getOn": "stat/sonoff/POWER",
+// 		"setOn": "cmnd/sonoff/POWER",
+// 		"getHsb": "stat/sonoff/HSBColor",
+// 		"setHsb": "cmnd/sonoff/HSBColor"
 // 	}
 // }],
 //
@@ -29,8 +22,9 @@
 
 "use strict";
 
-var Service, Characteristic;
-var mqtt = require("mqtt");
+let Service, Characteristic;
+const mqtt = require("mqtt");
+const contextEnum = Object.freeze({ fromSetValue: 1 });
 
 function mqttlightbulbAccessory(log, config) {
   this.log = log;
@@ -97,53 +91,62 @@ function mqttlightbulbAccessory(log, config) {
   });
 
   this.client.on("message", (topic, message) => {
-    if (topic == this.topics.getOn) {
-      var status = message.toString();
-      this.on = status === "On" ? true : false;
-      this.service
-        .getCharacteristic(Characteristic.On)
-        .setValue(this.on, undefined, "fromSetValue");
-    }
-
-    if (topic == this.topics.getHsb) {
-      try {
-        // Pull the HSB values from the message
-        // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
-        let hsb = JSON.parse(message).HSBColor;
-        [this.hue, this.saturation, this.brightness] = hsb.split(",");
-        this.on = brightness > 0;
-
-        // Update the accessory's state
+    switch (topic) {
+      case this.topics.getOn: {
+        var status = message.toString();
+        this.on = status === "On" ? true : false;
         this.service
           .getCharacteristic(Characteristic.On)
-          .setValue(this.on, undefined, "fromSetValue");
-        this.service
-          .getCharacteristic(Characteristic.Hue)
-          .setValue(this.hue, undefined, "fromSetValue");
-        this.service
-          .getCharacteristic(Characteristic.Saturation)
-          .setValue(this.saturation, undefined, "fromSetValue");
-        this.service
-          .getCharacteristic(Characteristic.Brightness)
-          .setValue(this.brightness, undefined, "fromSetValue");
-      } catch (error) {
-        console.log("Error: malformed HSBColor result:");
-        console.log(message);
+          .setValue(this.on, undefined, contextEnum.fromSetValue);
+
+        break;
       }
+
+      case this.topics.getHsb: {
+        try {
+          // Pull the HSB values from the message
+          // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+          const hsb = JSON.parse(message).HSBColor;
+          [this.hue, this.saturation, this.brightness] = hsb.split(",");
+          this.on = brightness > 0;
+
+          // Update the accessory's state
+          this.service
+            .getCharacteristic(Characteristic.On)
+            .setValue(this.on, undefined, contextEnum.fromSetValue);
+          this.service
+            .getCharacteristic(Characteristic.Hue)
+            .setValue(this.hue, undefined, contextEnum.fromSetValue);
+          this.service
+            .getCharacteristic(Characteristic.Saturation)
+            .setValue(this.saturation, undefined, contextEnum.fromSetValue);
+          this.service
+            .getCharacteristic(Characteristic.Brightness)
+            .setValue(this.brightness, undefined, contextEnum.fromSetValue);
+        } catch (error) {
+          console.log("Error: malformed HSBColor result:");
+          console.log(message);
+        }
+
+        break;
+      }
+
+      default:
+        break;
     }
   });
   this.client.subscribe(this.topics.getOn);
   this.client.subscribe(this.topics.getHsb);
 
   this.publishHsb = () => {
-    let message = `${this.hue},${this.saturation},${this.brightness},`;
+    const message = `${this.hue},${this.saturation},${this.brightness},`;
     this.client.publish(this.topics.setHsb, message, {
       retain: this.retain
     });
   };
 
   this.publishOn = () => {
-    let message = this.on ? "On" : "Off";
+    const message = this.on ? "On" : "Off";
     this.client.publish(this.topics.setOn, message, {
       retain: this.retain
     });
@@ -163,7 +166,7 @@ module.exports = homebridge => {
 mqttlightbulbAccessory.prototype.getStatus = callback =>
   callback(null, this.on);
 mqttlightbulbAccessory.prototype.setStatus = (status, callback, context) => {
-  if (context !== "fromSetValue") {
+  if (context !== contextEnum.fromSetValue) {
     this.on = status;
     this.publishOn();
   }
@@ -177,7 +180,7 @@ mqttlightbulbAccessory.prototype.setBrightness = (
   callback,
   context
 ) => {
-  if (context !== "fromSetValue") {
+  if (context !== contextEnum.fromSetValue) {
     this.brightness = brightness;
     this.publishHsb();
   }
@@ -186,7 +189,7 @@ mqttlightbulbAccessory.prototype.setBrightness = (
 
 mqttlightbulbAccessory.prototype.getHue = callback => callback(null, this.hue);
 mqttlightbulbAccessory.prototype.setHue = (hue, callback, context) => {
-  if (context !== "fromSetValue") {
+  if (context !== contextEnum.fromSetValue) {
     this.hue = hue;
     this.publishHsb();
   }
@@ -200,7 +203,7 @@ mqttlightbulbAccessory.prototype.setSaturation = (
   callback,
   context
 ) => {
-  if (context !== "fromSetValue") {
+  if (context !== contextEnum.fromSetValue) {
     this.saturation = saturation;
     this.publishHsb();
   }
