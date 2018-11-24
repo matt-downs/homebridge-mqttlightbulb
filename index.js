@@ -90,7 +90,7 @@ class SonoffTasmotaMqttHsb {
       case this.topics.getOn:
         {
           var status = message.toString();
-          this.on = status === "On" ? true : false;
+          this.on = status === "ON" ? true : false;
           this.service
           .getCharacteristic(Characteristic.On)
           .setValue(this.on, undefined, contextEnum.fromSetValue);
