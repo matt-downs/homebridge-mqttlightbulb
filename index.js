@@ -90,7 +90,7 @@ class SonoffTasmotaMqttHsb {
       case this.topics.getOn:
         {
           var status = message.toString();
-          this.on = status === "On" ? true : false;
+          this.on = status === "ON" ? true : false;
           this.service
           .getCharacteristic(Characteristic.On)
           .setValue(this.on, undefined, contextEnum.fromSetValue);
@@ -105,7 +105,7 @@ class SonoffTasmotaMqttHsb {
             // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
             const hsb = JSON.parse(message).HSBColor;
             [this.hue, this.saturation, this.brightness] = hsb.split(",");
-            this.on = brightness > 0;
+            //this.on = brightness > 0;
 
             // Update the accessory's state
             this.service
