@@ -94,6 +94,7 @@ class SonoffTasmotaMqttHsb {
         this.service
           .getCharacteristic(Characteristic.On)
           .setValue(this.on, undefined, contextEnum.fromSetValue);
+        this.log(`Recieved command: turn ${this.on ? "on" : "off"}`);
         break;
       }
 
@@ -118,9 +119,14 @@ class SonoffTasmotaMqttHsb {
           this.service
             .getCharacteristic(Characteristic.Brightness)
             .setValue(this.brightness, undefined, contextEnum.fromSetValue);
+          this.log(
+            `Recieved command: hue:${this.hue}, saturation:${
+              this.saturation
+            }, brightness:${this.brightness}`
+          );
         } catch (error) {
-          console.log("Error: malformed HSBColor result:");
-          console.log(message);
+          this.log(`Error parsing message from ${this.topics.getHsb} topic:`);
+          this.log(message);
         }
         break;
       }
@@ -135,6 +141,11 @@ class SonoffTasmotaMqttHsb {
     this.client.publish(this.topics.setHsb, message, {
       retain: this.retain
     });
+    this.log(
+      `Sent command: hue:${this.hue}, saturation:${
+        this.saturation
+      }, brightness:${this.brightness}`
+    );
   }
 
   mqttPublishStatus() {
@@ -142,6 +153,7 @@ class SonoffTasmotaMqttHsb {
     this.client.publish(this.topics.setOn, message, {
       retain: this.retain
     });
+    this.log(`Sent command: turn ${this.on ? "on" : "off"}`);
   }
 
   getStatus(callback) {
