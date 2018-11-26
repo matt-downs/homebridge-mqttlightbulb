@@ -86,7 +86,7 @@ class SonoffTasmotaMqttHsb {
   }
 
   mqttHandleMessage(topic, messageBuffer) {
-    message = messageBuffer.toString();
+    const message = messageBuffer.toString();
 
     switch (topic) {
       case this.topics.getOn: {
