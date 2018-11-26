@@ -104,7 +104,7 @@ class SonoffTasmotaMqttHsb {
           // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
           const hsb = JSON.parse(message).HSBColor;
           [this.hue, this.saturation, this.brightness] = hsb.split(",");
-          this.on = brightness > 0;
+          this.on = this.brightness > 0;
 
           // Update the accessory's state
           this.service
