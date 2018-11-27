@@ -31,7 +31,7 @@
     "mqtt": "^2.18.8"
   },
   "author": "matt-downs",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/matt-downs/homebridge-sonoff-tasmota-mqtt-hsb/issues"
   },
