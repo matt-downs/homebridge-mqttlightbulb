@@ -28,7 +28,7 @@
     "Tasmota"
   ],
   "dependencies": {
-    "mqtt": "^2.18.1"
+    "mqtt": "^2.18.8"
   },
   "author": "matt-downs",
   "license": "Apache 2.0",
