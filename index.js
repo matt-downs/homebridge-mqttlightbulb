@@ -3,7 +3,7 @@
 let Service, Characteristic;
 const mqtt = require("mqtt");
 const contextEnum = Object.freeze({
-  fromSetValue: 1
+  fromSetValue: "fromSetValue"
 });
 
 module.exports = homebridge => {
