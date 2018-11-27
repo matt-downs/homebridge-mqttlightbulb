@@ -81,58 +81,49 @@ class SonoffTasmotaMqttHsb {
       this.log("Error event on MQTT:", err);
     });
     this.client.on("message", this.mqttHandleMessage.bind(this));
-    this.client.subscribe(this.topics.getOn);
-    this.client.subscribe(this.topics.getHsb);
+    this.client.subscribe(this.topics.status);
   }
 
   mqttHandleMessage(topic, messageBuffer) {
+    if (topic !== this.topics.status) return;
+
     const message = messageBuffer.toString();
-
-    switch (topic) {
-      case this.topics.getOn: {
-        this.on = message === "ON";
-        this.service
-          .getCharacteristic(Characteristic.On)
-          .setValue(this.on, undefined, contextEnum.fromSetValue);
-        this.log(`Recieved command: turn ${this.on ? "on" : "off"}`);
-        break;
+    try {
+      // Pull the HSB and power values from the message
+      // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
+      const { HSBColor: hsb, POWER: power } = JSON.parse(message);
+      if (power !== undefined) {
+        this.on = power === "ON";
+      }
+      if (hsb !== undefined) {
+        [this.hue, this.saturation, this.brightness] = hsb.split(",");
+        if (this.brightness <= 0) this.on = false;
       }
 
-      case this.topics.getHsb: {
-        try {
-          // Pull the HSB values from the message
-          // eg message: {"POWER":"ON","Dimmer":100,"Color":"FF7F81","HSBColor":"359,50,100","Channel":[100,50,51]}
-          const hsb = JSON.parse(message).HSBColor;
-          [this.hue, this.saturation, this.brightness] = hsb.split(",");
-          this.on = this.brightness > 0;
-
-          // Update the accessory's state
-          this.service
-            .getCharacteristic(Characteristic.On)
-            .setValue(this.on, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Hue)
-            .setValue(this.hue, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Saturation)
-            .setValue(this.saturation, undefined, contextEnum.fromSetValue);
-          this.service
-            .getCharacteristic(Characteristic.Brightness)
-            .setValue(this.brightness, undefined, contextEnum.fromSetValue);
-          this.log(
-            `Recieved command: hue:${this.hue}, saturation:${
-              this.saturation
-            }, brightness:${this.brightness}`
-          );
-        } catch (error) {
-          this.log(`Error parsing message from ${this.topics.getHsb} topic:`);
-          this.log(message);
-        }
-        break;
-      }
-
-      default:
-        break;
+      // Update the accessory's state
+      this.service
+        .getCharacteristic(Characteristic.On)
+        .setValue(this.on, undefined, contextEnum.fromSetValue);
+      this.service
+        .getCharacteristic(Characteristic.Hue)
+        .setValue(this.hue, undefined, contextEnum.fromSetValue);
+      this.service
+        .getCharacteristic(Characteristic.Saturation)
+        .setValue(this.saturation, undefined, contextEnum.fromSetValue);
+      this.service
+        .getCharacteristic(Characteristic.Brightness)
+        .setValue(this.brightness, undefined, contextEnum.fromSetValue);
+      this.log(
+        `Recieved message: power: ${this.on}, hue:${this.hue}, saturation:${
+          this.saturation
+        }, brightness:${this.brightness}`
+      );
+    } catch (error) {
+      this.log(
+        `Error parsing message from ${this.topics.status} topic:`,
+        message,
+        error
+      );
     }
   }
 
