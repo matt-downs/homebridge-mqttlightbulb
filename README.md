@@ -1,3 +1,6 @@
+## Breaking changes in 2.0.0
+You will need to update your configuration to remove the `topics.getOn` and `topics.getHsb` values, and add in a `topics.status` value instead - this is by default this is `stat/device-name/RESULT`. See the [Configuration](#Configuration) section for an updated config example. 
+
 # homebridge-sonoff-tasmota-mqtt-hsb
 
 A homebridge plugin for RGB LED devices running the [Sonoff-Tasmota](https://github.com/arendst/Sonoff-Tasmota/wiki/MagicHome-LED-strip-controller) firmware, such as the [MagicHome LED strip controller](https://github.com/arendst/Sonoff-Tasmota/wiki/MagicHome-LED-strip-controller).
@@ -29,10 +32,9 @@ Remember to configure the plugin in config.json in your home directory inside th
     "password": "<password>",
     "caption": "<label>",
     "topics": {
-      "getOn": "stat/sonoff/Power",
       "setOn": "cmnd/sonoff/Power",
       "setHsb": "cmnd/sonoff/HSBColor",
-      "getHsb": "stat/sonoff/HSBColor"
+      "status": "stat/sonoff/RESULT"
     }
   }
 ],
